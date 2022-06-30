@@ -125,10 +125,12 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks, gt_labels, mask_matched_idxs
     if mask_targets.numel() == 0:
         return mask_logits.sum() * 0
 
-    mask_loss = F.binary_cross_entropy_with_logits(
-        mask_logits[torch.arange(labels.shape[0], device=labels.device), labels], mask_targets
+    return F.binary_cross_entropy_with_logits(
+        mask_logits[
+            torch.arange(labels.shape[0], device=labels.device), labels
+        ],
+        mask_targets,
     )
-    return mask_loss
 
 
 def keypoints_to_heatmap(keypoints, rois, heatmap_size):
@@ -305,8 +307,7 @@ def keypointrcnn_loss(keypoint_logits, proposals, gt_keypoints, keypoint_matched
 
     keypoint_logits = keypoint_logits.view(N * K, H * W)
 
-    keypoint_loss = F.cross_entropy(keypoint_logits[valid], keypoint_targets[valid])
-    return keypoint_loss
+    return F.cross_entropy(keypoint_logits[valid], keypoint_targets[valid])
 
 
 def keypointrcnn_inference(x, boxes):
@@ -339,8 +340,7 @@ def _onnx_expand_boxes(boxes, scale):
     boxes_exp1 = y_c - h_half
     boxes_exp2 = x_c + w_half
     boxes_exp3 = y_c + h_half
-    boxes_exp = torch.stack((boxes_exp0, boxes_exp1, boxes_exp2, boxes_exp3), 1)
-    return boxes_exp
+    return torch.stack((boxes_exp0, boxes_exp1, boxes_exp2, boxes_exp3), 1)
 
 
 # the next two functions should be merged inside Masker
@@ -445,10 +445,7 @@ def _onnx_paste_mask_in_image(mask, box, im_h, im_w):
     # pad x
     zeros_x0 = torch.zeros(concat_0.size(0), x_0)
     zeros_x1 = torch.zeros(concat_0.size(0), im_w - x_1)
-    im_mask = torch.cat((zeros_x0,
-                         concat_0,
-                         zeros_x1), 1)[:, :im_w]
-    return im_mask
+    return torch.cat((zeros_x0, concat_0, zeros_x1), 1)[:, :im_w]
 
 
 @torch.jit._script_if_tracing
@@ -480,11 +477,11 @@ def paste_masks_in_image(masks, boxes, img_shape, padding=1):
         paste_mask_in_image(m[0], b, im_h, im_w)
         for m, b in zip(masks, boxes)
     ]
-    if len(res) > 0:
-        ret = torch.stack(res, dim=0)[:, None]
-    else:
-        ret = masks.new_empty((0, 1, im_h, im_w))
-    return ret
+    return (
+        torch.stack(res, dim=0)[:, None]
+        if res
+        else masks.new_empty((0, 1, im_h, im_w))
+    )
 
 
 class RoIHeads(torch.nn.Module):
@@ -606,9 +603,7 @@ class RoIHeads(torch.nn.Module):
         # type: (List[Tensor]) -> List[Tensor]
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
         sampled_inds = []
-        for img_idx, (pos_inds_img, neg_inds_img) in enumerate(
-            zip(sampled_pos_inds, sampled_neg_inds)
-        ):
+        for pos_inds_img, neg_inds_img in zip(sampled_pos_inds, sampled_neg_inds):
             img_sampled_inds = torch.where(pos_inds_img | neg_inds_img)[0]
             sampled_inds.append(img_sampled_inds)
         return sampled_inds
@@ -625,10 +620,10 @@ class RoIHeads(torch.nn.Module):
     def check_targets(self, targets):
         # type: (Optional[List[Dict[str, Tensor]]]) -> None
         assert targets is not None
-        assert all(["boxes" in t for t in targets])
-        assert all(["labels" in t for t in targets])
+        assert all("boxes" in t for t in targets)
+        assert all("labels" in t for t in targets)
         if self.has_mask():
-            assert all(["masks" in t for t in targets])
+            assert all("masks" in t for t in targets)
 
     def select_training_samples(self,
                                 proposals,  # type: List[Tensor]
@@ -823,7 +818,7 @@ class RoIHeads(torch.nn.Module):
                 for mask_prob, r in zip(masks_probs, result):
                     r["masks"] = mask_prob
 
-            losses.update(loss_mask)
+            losses |= loss_mask
 
         # keep none checks in if conditional so torchscript will conditionally
         # compile each branch
@@ -868,6 +863,6 @@ class RoIHeads(torch.nn.Module):
                     r["keypoints"] = keypoint_prob
                     r["keypoints_scores"] = kps
 
-            losses.update(loss_keypoint)
+            losses |= loss_keypoint
 
         return result, losses

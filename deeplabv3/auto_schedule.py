@@ -27,13 +27,13 @@ def benchmark_torch(model, inp, num_iters):
     # torch.backends.cudnn.benchmark = True
 
     with torch.no_grad():
-        for i in range(3):
+        for _ in range(3):
             model(inp)
         torch.cuda.synchronize()
 
         import time
         t1 = time.time()
-        for i in range(num_iters):
+        for _ in range(num_iters):
             model(inp)
         torch.cuda.synchronize()
         t2 = time.time()

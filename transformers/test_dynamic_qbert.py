@@ -113,10 +113,11 @@ def evaluate(args, model, tokenizer, prefix=""):
         ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
     )
     eval_outputs_dirs = (
-        (args.output_dir, args.output_dir + "-MM")
+        (args.output_dir, f"{args.output_dir}-MM")
         if args.task_name == "mnli"
         else (args.output_dir,)
     )
+
 
     results = {}
     for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
@@ -139,7 +140,7 @@ def evaluate(args, model, tokenizer, prefix=""):
             model = torch.nn.DataParallel(model)
 
         # Eval!
-        logger.info("***** Running evaluation {} *****".format(prefix))
+        logger.info(f"***** Running evaluation {prefix} *****")
         logger.info("  Num examples = %d", len(eval_dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
         eval_loss = 0.0
@@ -181,11 +182,11 @@ def evaluate(args, model, tokenizer, prefix=""):
         elif args.output_mode == "regression":
             preds = np.squeeze(preds)
         result = compute_metrics(eval_task, preds, out_label_ids)
-        results.update(result)
+        results |= result
 
         output_eval_file = os.path.join(eval_output_dir, prefix, "eval_results.txt")
         with open(output_eval_file, "w") as writer:
-            logger.info("***** Eval results {} *****".format(prefix))
+            logger.info(f"***** Eval results {prefix} *****")
             for key in sorted(result.keys()):
                 logger.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
@@ -202,13 +203,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
     # Load data features from cache or dataset file
     cached_features_file = os.path.join(
         args.data_dir,
-        "cached_{}_{}_{}_{}".format(
-            "dev" if evaluate else "train",
-            list(filter(None, args.model_name_or_path.split("/"))).pop(),
-            str(args.max_seq_length),
-            str(task),
-        ),
+        f'cached_{"dev" if evaluate else "train"}_{list(filter(None, args.model_name_or_path.split("/"))).pop()}_{str(args.max_seq_length)}_{str(task)}',
     )
+
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
@@ -250,10 +247,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
     elif output_mode == "regression":
         all_labels = torch.tensor([f.label for f in features], dtype=torch.float)
 
-    dataset = TensorDataset(
+    return TensorDataset(
         all_input_ids, all_attention_mask, all_token_type_ids, all_labels
     )
-    return dataset
 
 
 def time_model_evaluation(model, configs, tokenizer):
@@ -276,11 +272,11 @@ def perf_bench_torch(pt_model, inp, n_repeat):
     with torch.no_grad():
         pt_model.eval()
 
-        for i in range(3):
+        for _ in range(3):
             pt_model(**inputs)
 
         t1 = time.time()
-        for i in range(n_repeat):
+        for _ in range(n_repeat):
             pt_model(**inputs)
         t2 = time.time()
 
@@ -295,7 +291,7 @@ tokenizer = BertTokenizer.from_pretrained(
     configs.output_dir, do_lower_case=configs.do_lower_case
 )
 
-quantized_output_dir = configs.output_dir + "quantized/"
+quantized_output_dir = f"{configs.output_dir}quantized/"
 if not os.path.exists(quantized_output_dir):
     os.makedirs(quantized_output_dir)
     quantized_model.save_pretrained(quantized_output_dir)
@@ -356,10 +352,11 @@ def evaluate_tvm(args, prefix=""):
         ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
     )
     eval_outputs_dirs = (
-        (args.output_dir, args.output_dir + "-MM")
+        (args.output_dir, f"{args.output_dir}-MM")
         if args.task_name == "mnli"
         else (args.output_dir,)
     )
+
 
     results = {}
     for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
@@ -377,7 +374,7 @@ def evaluate_tvm(args, prefix=""):
         )
 
         # Eval!
-        logger.info("***** Running evaluation {} *****".format(prefix))
+        logger.info(f"***** Running evaluation {prefix} *****")
         logger.info("  Num examples = %d", len(eval_dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
         # eval_loss = 0.0
@@ -411,11 +408,11 @@ def evaluate_tvm(args, prefix=""):
         # print(preds)
         # print(out_label_ids)
         result = compute_metrics(eval_task, preds, out_label_ids)
-        results.update(result)
+        results |= result
 
-        output_eval_file = os.path.join(eval_output_dir, prefix + "_eval_results.txt")
+        output_eval_file = os.path.join(eval_output_dir, f"{prefix}_eval_results.txt")
         with open(output_eval_file, "w") as writer:
-            logger.info("***** Eval results {} *****".format(prefix))
+            logger.info(f"***** Eval results {prefix} *****")
             for key in sorted(result.keys()):
                 logger.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
@@ -434,12 +431,10 @@ def time_tvm_model_evaluation():
 
 time_tvm_model_evaluation()
 
-# PyTorch eval
-if True:
-    # # Evaluate the original FP32 BERT model
-    # print("Evaluating PyTorch full precision accuracy and performance:")
-    # time_model_evaluation(model, configs, tokenizer)
+# # Evaluate the original FP32 BERT model
+# print("Evaluating PyTorch full precision accuracy and performance:")
+# time_model_evaluation(model, configs, tokenizer)
 
-    # Evaluate the INT8 BERT model after the dynamic quantization
-    print("Evaluating PyTorch quantization accuracy and performance:")
-    time_model_evaluation(quantized_model, configs, tokenizer)
+# Evaluate the INT8 BERT model after the dynamic quantization
+print("Evaluating PyTorch quantization accuracy and performance:")
+time_model_evaluation(quantized_model, configs, tokenizer)

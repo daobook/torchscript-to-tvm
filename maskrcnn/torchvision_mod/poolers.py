@@ -122,8 +122,7 @@ class MultiScaleRoIAlign(nn.Module):
             ],
             dim=0,
         )
-        rois = torch.cat([ids, concat_boxes], dim=1)
-        return rois
+        return torch.cat([ids, concat_boxes], dim=1)
 
     def infer_scale(self, feature: Tensor, original_size: List[int]) -> float:
         # assumption: the scale is of the form 2 ** (-k), with k integer
@@ -141,7 +140,7 @@ class MultiScaleRoIAlign(nn.Module):
         features: List[Tensor],
         image_shapes: List[Tuple[int, int]],
     ) -> None:
-        assert len(image_shapes) != 0
+        assert image_shapes
         max_x = 0
         max_y = 0
         for shape in image_shapes:
@@ -176,10 +175,7 @@ class MultiScaleRoIAlign(nn.Module):
         Returns:
             result (Tensor)
         """
-        x_filtered = []
-        for k, v in x.items():
-            if k in self.featmap_names:
-                x_filtered.append(v)
+        x_filtered = [v for k, v in x.items() if k in self.featmap_names]
         num_levels = len(x_filtered)
         rois = self.convert_to_roi_format(boxes)
         if self.scales is None:

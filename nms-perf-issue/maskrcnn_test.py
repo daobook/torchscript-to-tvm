@@ -122,4 +122,4 @@ for i, score in enumerate(tvm_res[1].asnumpy().tolist()):
     else:
         break
 
-print("Get {} valid boxes".format(len(valid_boxes)))
+print(f"Get {len(valid_boxes)} valid boxes")

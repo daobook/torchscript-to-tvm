@@ -57,8 +57,7 @@ def export_to_onnx(model, input, input_names):
                       operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK)
     f.seek(0)
 
-    onnx_model = onnx.load(f)
-    return onnx_model
+    return onnx.load(f)
 
 
 def test_qconv_model():
@@ -124,9 +123,7 @@ def test_sequential():
             super().__init__()
             self.conv1 = nn.Conv2d(3, 3, 1)
             self.relu1 = nn.ReLU(inplace=False)
-            layers = []
-            for i in range(3):
-                layers.append(ConvBNReLUModule())
+            layers = [ConvBNReLUModule() for _ in range(3)]
             self.features = nn.Sequential(*layers)
             head = [nn.Linear(300, 10), nn.ReLU(inplace=False)]
             self.classifier = nn.Sequential(*head)

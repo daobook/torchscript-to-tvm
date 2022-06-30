@@ -131,7 +131,7 @@ def test_imagenet():
     from torchvision.models.efficientnet import efficientnet_b4
     from torchvision.models.resnet import resnet50
 
-    for model_func in [resnet50, efficientnet_b4]:
+    for _ in [resnet50, efficientnet_b4]:
         model = efficientnet_b4(pretrained=True).eval()
         model = quantize(model)
 
