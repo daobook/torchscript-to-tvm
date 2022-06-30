@@ -50,13 +50,13 @@ def benchmark_torch(model, inp, num_iters):
     # torch.backends.cudnn.benchmark = True
 
     with torch.no_grad():
-        for i in range(3):
+        for _ in range(3):
             model(inp)
         torch.cuda.synchronize()
 
         import time
         t1 = time.time()
-        for i in range(num_iters):
+        for _ in range(num_iters):
             model(inp)
         torch.cuda.synchronize()
         t2 = time.time()
@@ -170,23 +170,12 @@ def bench_tvm():
     # target = "cuda -libs=cublas"
     target = "cuda -libs=cublas"
 
-    if True:
-        with auto_scheduler.ApplyHistoryBest("logs/maskrcnn_rtx3070.log"):
-            with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
-                desired_layouts = {'nn.conv2d': ['NHWC', 'default'], "vision.roi_align": ["NHWC", "default"]}
-                seq = tvm.transform.Sequential([relay.transform.ConvertLayout(desired_layouts)])
-                mod = seq(mod)
-                vm_exec = relay.vm.compile(mod, target=target, params=params)
-    else:
-        # with auto_scheduler.ApplyHistoryBest("logs/maskrcnn_nvptx.log"):
-        # # with auto_scheduler.ApplyHistoryBest("logs/maskrcnn_cuda.log"):
-        #     with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
-        with tvm.transform.PassContext(opt_level=3):
-            # desired_layouts = {'nn.conv2d': ['NHWC', 'default'], "vision.roi_align": ["NHWC", "default"]}
-            # seq = tvm.transform.Sequential([relay.transform.ConvertLayout(desired_layouts)])
-            # mod = seq(mod)
+    with auto_scheduler.ApplyHistoryBest("logs/maskrcnn_rtx3070.log"):
+        with tvm.transform.PassContext(opt_level=3, config={"relay.backend.use_auto_scheduler": True}):
+            desired_layouts = {'nn.conv2d': ['NHWC', 'default'], "vision.roi_align": ["NHWC", "default"]}
+            seq = tvm.transform.Sequential([relay.transform.ConvertLayout(desired_layouts)])
+            mod = seq(mod)
             vm_exec = relay.vm.compile(mod, target=target, params=params)
-
     print("compile finished")
     # ######################################################################
     # # Inference with Relay VM

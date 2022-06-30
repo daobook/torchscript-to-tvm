@@ -17,7 +17,7 @@ def vmobj_to_list(o, dtype="float32"):
             result.extend(vmobj_to_list(f, dtype))
         return result
     else:
-        raise RuntimeError("Unknown object type: %s" % type(o))
+        raise RuntimeError(f"Unknown object type: {type(o)}")
 
 
 def assert_equal(tvm_result, torch_result):
@@ -67,10 +67,7 @@ def run_and_compare(mod, params, pt_result):
 def simple_rnn_test():
     class DecisionGate(torch.nn.Module):
         def forward(self, x):
-            if x.sum() > 0:
-                return x
-            else:
-                return -x
+            return x if x.sum() > 0 else -x
 
     class Cell(torch.nn.Module):
         def __init__(self, dg):

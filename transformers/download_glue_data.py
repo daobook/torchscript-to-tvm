@@ -45,8 +45,8 @@ MRPC_TEST = "https://dl.fbaipublicfiles.com/senteval/senteval_data/msr_paraphras
 
 
 def download_and_extract(task, data_dir):
-    print("Downloading and extracting %s..." % task)
-    data_file = "%s.zip" % task
+    print(f"Downloading and extracting {task}...")
+    data_file = f"{task}.zip"
     urllib.request.urlretrieve(TASK2PATH[task], data_file)
     with zipfile.ZipFile(data_file) as zip_ref:
         zip_ref.extractall(data_dir)
@@ -63,20 +63,24 @@ def format_mrpc(data_dir, path_to_data):
         mrpc_train_file = os.path.join(path_to_data, "msr_paraphrase_train.txt")
         mrpc_test_file = os.path.join(path_to_data, "msr_paraphrase_test.txt")
     else:
-        print("Local MRPC data not specified, downloading data from %s" % MRPC_TRAIN)
+        print(f"Local MRPC data not specified, downloading data from {MRPC_TRAIN}")
         mrpc_train_file = os.path.join(mrpc_dir, "msr_paraphrase_train.txt")
         mrpc_test_file = os.path.join(mrpc_dir, "msr_paraphrase_test.txt")
         urllib.request.urlretrieve(MRPC_TRAIN, mrpc_train_file)
         urllib.request.urlretrieve(MRPC_TEST, mrpc_test_file)
-    assert os.path.isfile(mrpc_train_file), "Train data not found at %s" % mrpc_train_file
-    assert os.path.isfile(mrpc_test_file), "Test data not found at %s" % mrpc_test_file
+    assert os.path.isfile(
+        mrpc_train_file
+    ), f"Train data not found at {mrpc_train_file}"
+
+    assert os.path.isfile(
+        mrpc_test_file
+    ), f"Test data not found at {mrpc_test_file}"
+
     urllib.request.urlretrieve(TASK2PATH["MRPC"], os.path.join(mrpc_dir, "dev_ids.tsv"))
 
     dev_ids = []
     with open(os.path.join(mrpc_dir, "dev_ids.tsv"), encoding="utf8") as ids_fh:
-        for row in ids_fh:
-            dev_ids.append(row.strip().split("\t"))
-
+        dev_ids.extend(row.strip().split("\t") for row in ids_fh)
     with open(mrpc_train_file, encoding="utf8") as data_fh, open(
         os.path.join(mrpc_dir, "train.tsv"), "w", encoding="utf8"
     ) as train_fh, open(os.path.join(mrpc_dir, "dev.tsv"), "w", encoding="utf8") as dev_fh:
@@ -118,7 +122,7 @@ def get_tasks(task_names):
     else:
         tasks = []
         for task_name in task_names:
-            assert task_name in TASKS, "Task %s not found!" % task_name
+            assert task_name in TASKS, f"Task {task_name} not found!"
             tasks.append(task_name)
     return tasks
 

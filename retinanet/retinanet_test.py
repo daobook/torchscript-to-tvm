@@ -87,22 +87,6 @@ def retina_net_lab():
     print("compile finished")
     return
 
-    ctx = tvm.cpu()
-    vm = VirtualMachine(vm_exec, ctx)
-    vm.set_input("main", **{input_name: img})
-    tvm_res = vm.run()
-
-    score_threshold = 0.9
-    boxes = tvm_res[0].asnumpy().tolist()
-    valid_boxes = []
-    for i, score in enumerate(tvm_res[1].asnumpy().tolist()):
-        if score > score_threshold:
-            valid_boxes.append(boxes[i])
-        else:
-            break
-
-    print("Get {} valid boxes".format(len(valid_boxes)))
-
 
 if __name__ == '__main__':
     retina_net_lab()

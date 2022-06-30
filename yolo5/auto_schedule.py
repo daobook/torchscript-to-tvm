@@ -65,22 +65,6 @@ def auto_schedule():
     tasks, task_weights = auto_scheduler.extract_tasks(mod, params, target)
     return
 
-    for idx, task in enumerate(tasks):
-        print("========== Task %d  (workload key: %s) ==========" % (idx, task.workload_key))
-        print(task.compute_dag)
-
-    measure_ctx = auto_scheduler.LocalRPCMeasureContext(repeat=1, min_repeat_ms=300, timeout=100)
-
-    tuner = auto_scheduler.TaskScheduler(tasks, task_weights)
-    # tuner = auto_scheduler.TaskScheduler(tasks, task_weights, load_log_file=log_file)
-    tune_option = auto_scheduler.TuningOptions(
-        num_measure_trials=50000,  # change this to 20000 to achieve the best performance
-        runner=measure_ctx.runner,
-        measure_callbacks=[auto_scheduler.RecordToFile(log_file)],
-    )
-
-    tuner.tune(tune_option)
-
 
 def run():
     with auto_scheduler.ApplyHistoryBest(log_file):

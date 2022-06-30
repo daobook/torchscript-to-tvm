@@ -10,7 +10,7 @@ tgt = torch.rand((20, 32, 256))
 input = [src, tgt]
 
 trace = torch.jit.trace(model, input)
-input_names = ["input{}".format(idx) for idx, inp in enumerate(input)]
+input_names = [f"input{idx}" for idx, inp in enumerate(input)]
 input_shapes = list(zip(input_names, [inp.shape for inp in input]))
 
 with torch.no_grad():
